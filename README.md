@@ -11,38 +11,39 @@ The Home/Room Dashboard, the Fan Regulation screen, and the Automation/Timer set
 Traditional smart home solutions are all cloud-based. When internet goes out, user loses control of their home. In addition, prior solutions provided no advanced scheduling to meet specific local requirements, such as fan modulation for temperature.
 
 **The Solution:**
-I built myself a triple-redundancy network pipeline control application using Firebase Cloud, Local Wi-Fi Sockets and SMS fallback. The mobile app is a configuration engine, compiling the users' schedules and writing them directly to the hardware's local memory, so that automations occur reliably, regardless of network status. This ensures that the house will not require the mobile device to operate, even if it is destroyed or offline.
+I have built a triple-redundancy network pipeline control application using Firebase Cloud, Local Wi-Fi Sockets and SMS fallback. The mobile app is a configuration engine, compiling the user's schedules and writing them directly to the hardware's local memory, so that automations occur reliably, regardless of network status. This ensures that the house will not require the mobile device to operate, even if it is destroyed or offline.
 
 ## 🏗️ Architecture & Tech Stack
 
-What is the native platform for this application? (Java, XML, native Android).
-*   **Frontend / UI / UX:** Google Apps Script (GAS)
-*   **Electronic Components:** ESP8266 Microcontroller
-The networking options available are: HTTPS, Local TCP/IP Sockets, GSM Telephony API.
-This is for local caching of room hierarchies, which is found in SharedPreferences / SQLite.This is for local caching of room hierarchies, which is found in SharedPreferences / SQLite.
+*   **Platform:** Native Android (Java, XML)
+*   **Backend / State Sync:** Firebase Realtime Database
+*   **Hardware Target:** ESP8266 Microcontrollers
+*   **Networking:** HTTPS, Local TCP/IP Sockets, GSM Telephony API
+*   **Data Persistence:** SharedPreferences / SQLite (Local caching of room hierarchies)
 
 ### System Hierarchy
 The data model was designed to allow theoretically unlimited growth for the end user:
-To access the automation rules, proceed to User Account, Properties (Homes), Zones (Rooms), Switch Nodes (Lights/Fans) and Automation Rules.
+`User Account` ➔ `Properties (Homes)` ➔ `Zones (Rooms)` ➔ `Switch Nodes (Lights/Fans)` ➔ `Automation Rules`
 
 ## ⚡ Key Engineering Decisions
 
 ### 1. The Automation & Scheduling Engine
-Switch nodes can be operated in three different modes and it is complex to validate the state before writing to the hardware.
-Manual Override: Normal bidirectional ON/OFF switching.
-Countdown Mode: A timer that allows for the setting of a timer (e.g., "Turn off in 45 minutes") for a specific area. Added a hardware handshake, that whenever the device runs the code, it triggers a buzzer sound sequence, which informs the user in the room.
-Multiple ON/OFF schedules can be programmed by the user based on the days of the week, Cron-Style Scheduling. This is then combined into a payload which is compact in terms of bytes and checked to prevent time-overlaps, and then flashed to the RTC (Real-Time Clock) of the hardware.
+Switch nodes support three distinct operational modes, requiring complex state validation before writing to the hardware:
+*   **Manual Override:** Standard bidirectional ON/OFF toggling.
+*   **Countdown Mode:** A localized timer (e.g., "Turn off in 45 minutes"). I integrated a hardware handshake where the device fires a physical buzzer sequence upon execution to notify the user in the room.
+*   **Cron-Style Scheduling:** Users can program multiple ON/OFF configurations tied to specific days of the week. The app compiles this into a byte-efficient payload, validates it for time-overlap conflicts, and flashes it to the hardware's RTC (Real-Time Clock).
 
 ### 2. Thermostatic Fan Modulation
-I designed a fan controller to control the fan and simulate HVAC cooling for a house without an air conditioner. The app reads the ambient temperature data from the ambient temperature sensor hardware. The user sets a target temperature curve, the application will calculate the percentage to be used for the fan speed, and PWM (Pulse Width Modulation) signals will be sent to the regulator in the switchboard to control the room temperature automatically.
+To simulate HVAC cooling without an air conditioner, I built a temperature-reactive fan controller. The app reads ambient temperature data from the hardware sensors. The user defines a target temperature curve, and the app calculates the necessary fan speed percentage, transmitting PWM (Pulse Width Modulation) commands to the switchboard's regulator to stabilize the room climate automatically.
 
-### 3. Bidirectional State Resolution
-The state desynchronization was one of the main problems. For any user who physically presses the wall switch, the app should update the wall switch immediately. I used active socket listeners and Firebase observers to update the UI state optimistically, and used the conflict resolution to roll back the UI in case the hardware does not accept the change in state within a reasonable time window.
+### 3. Bi-directional State Resolution
+One of the primary challenges was state desynchronization. If a user physically presses the wall switch, the app must reflect this change instantly. I implemented active socket listeners and Firebase observers that update the UI state optimistically, utilizing conflict resolution to revert the UI if the hardware fails to acknowledge the state change within an acceptable timeout window.
 
 ### 4. Triple-Redundancy Communication
-I took over the strong networking pipe that was our agricultural controllers. The app is configured to try the cloud connection first and then automatically fail over to an IP-based connection if the user is on same router – during periods of total ISP failure, it will open a raw SMS command interface for remote management.
+I reused the robust networking pipeline, used in our agricultural controllers apps. The app attempts communication with local wi-fi, first if the user is on the same router, silently falls back to a cloud connection or GSM based SMS data sending protocal, based on the options selected by the user. For remote management during total ISP outages, the application can be connected with the device through local IP or SMS Protocal.
+
 
 ## 🐛 Edge Cases Handled
-Race conditions: UI doesn't tear when the user rapidly flips a switch in the app and the hardware reports a button press.
-Add validation to stop the user from scheduling "ON" and "OFF" instructions at the same minute of the same day.
-Improved socket stability with stable connection handlers during Network Handoffs, which means that the app does not crash while the user is moving from Local Wi-Fi to 4G / Firebase.
+*   **Race Conditions:** Prevented UI tearing when a user rapidly toggles a switch in the app while the hardware is simultaneously reporting a physical button press.
+*   **Schedule Conflicts:** Wrote validation logic to prevent users from accidentally scheduling an "ON" and "OFF" command for the exact same minute on the same day.
+*   **Network Handoffs:** Built stable connection handlers that prevent socket crashes when the user walks out of the house (transitioning from Local Wi-Fi back to 4G/Firebase).
