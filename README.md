@@ -1,4 +1,4 @@
-# Smart Home Switchboard Controller
+# Smart Home Switchboard - IoT Controller App
 
 The application is a native Android application that is developed to control, automate and monitor retrofittable wall switchboards of IoT.
 
