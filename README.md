@@ -5,7 +5,7 @@ The application is a native Android application that is developed to control, au
 This project had significantly more complicated automation schedules that were common to multiple user environments, extremely nested user environments, and automation schedules that were synced directly to physical microcontrollers.
 
 ## 📱 Interface Showcase
-![UI Showcase](https://github.com/user-attachments/assets/1f374374-5b70-4a6c-a0ee-bfa817814192)
+![UI Showcase](https://github.com/user-attachments/assets/f9fd971c-990b-4a26-a4e6-4c0dab387f8a)
 
 ## 🎯 The Problem & Purpose
 Traditional smart home solutions are all cloud-based. When internet goes out, user loses control of their home. In addition, prior solutions provided no advanced scheduling to meet specific local requirements, such as fan modulation for temperature.
